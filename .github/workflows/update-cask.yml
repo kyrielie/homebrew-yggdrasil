@@ -1,0 +1,73 @@
+name: Update cask from app release
+
+on:
+  repository_dispatch:
+    types: [app-release]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-cask:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate release payload and calculate checksum
+        id: release
+        env:
+          APP: ${{ github.event.client_payload.app }}
+          VERSION: ${{ github.event.client_payload.version }}
+          ASSET_URL: ${{ github.event.client_payload.asset_url }}
+          ASSET_NAME: ${{ github.event.client_payload.asset_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$APP" in
+            honeycrisp)
+              expected_repo="kyrielie/honeycrisp"
+              expected_asset="Honeycrisp.dmg"
+              minimum_os=ventura
+              ;;
+            ambrosia)
+              expected_repo="kyrielie/ambrosia"
+              expected_asset="Ambrosia.dmg"
+              minimum_os=sequoia
+              ;;
+            *) echo "Unsupported app: $APP" >&2; exit 1 ;;
+          esac
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?([.-][0-9A-Za-z.-]+)?$ ]]
+          [[ "$ASSET_NAME" == "$expected_asset" ]]
+          [[ "$ASSET_URL" == "https://github.com/$expected_repo/releases/download/v$VERSION/$expected_asset" ]]
+          curl --fail --location --silent --show-error "$ASSET_URL" --output "$RUNNER_TEMP/$ASSET_NAME"
+          checksum=$(shasum -a 256 "$RUNNER_TEMP/$ASSET_NAME" | awk '{print $1}')
+          echo "app=$APP" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "sha256=$checksum" >> "$GITHUB_OUTPUT"
+          echo "minimum_os=$minimum_os" >> "$GITHUB_OUTPUT"
+
+      - name: Update cask version and checksum
+        env:
+          APP: ${{ steps.release.outputs.app }}
+          VERSION: ${{ steps.release.outputs.version }}
+          SHA256: ${{ steps.release.outputs.sha256 }}
+        run: |
+          ruby -e '
+            path = "Casks/#{ENV.fetch("APP")}.rb"
+            content = File.read(path)
+            content.sub!(/^  version ".*"$/, "  version \"#{ENV.fetch("VERSION")}\"") or abort "version line not found"
+            content.sub!(/^  sha256 ".*"$/, "  sha256 \"#{ENV.fetch("SHA256")}\"") or abort "sha256 line not found"
+            File.write(path, content)
+          '
+
+      - name: Open cask update pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update ${{ steps.release.outputs.app }} to ${{ steps.release.outputs.version }}"
+          branch: "automation/${{ steps.release.outputs.app }}-${{ steps.release.outputs.version }}"
+          delete-branch: true
+          title: "Update ${{ steps.release.outputs.app }} to ${{ steps.release.outputs.version }}"
+          body: "Automated cask update from the published app release. SHA-256 was computed from the release DMG."
+          add-paths: Casks/${{ steps.release.outputs.app }}.rb

@@ -1,0 +1,19 @@
+name: Audit casks
+
+on:
+  pull_request:
+    paths:
+      - "Casks/**"
+      - ".github/workflows/audit.yml"
+
+jobs:
+  audit:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit changed casks
+        run: |
+          set -euo pipefail
+          for cask in Casks/*.rb; do
+            brew audit --cask --strict "$cask"
+          done
