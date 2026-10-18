@@ -7,7 +7,7 @@ cask "ambrosia" do
   desc "EPUB library organizer and reader for Calibre libraries"
   homepage "https://github.com/kyrielie/ambrosia"
 
-  depends_on macos: ">= :sequoia"
+  depends_on macos: :sequoia
 
   app "Ambrosia.app"
 end
