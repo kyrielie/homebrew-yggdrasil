@@ -3,6 +3,19 @@ name: Update cask from app release
 on:
   repository_dispatch:
     types: [app-release]
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "App whose cask should be updated"
+        type: choice
+        options:
+          - honeycrisp
+          - ambrosia
+        required: true
+      version:
+        description: "Release version without the leading v (for example, 2.1.0)"
+        type: string
+        required: true
 
 permissions:
   contents: write
@@ -17,10 +30,8 @@ jobs:
       - name: Validate release payload and calculate checksum
         id: release
         env:
-          APP: ${{ github.event.client_payload.app }}
-          VERSION: ${{ github.event.client_payload.version }}
-          ASSET_URL: ${{ github.event.client_payload.asset_url }}
-          ASSET_NAME: ${{ github.event.client_payload.asset_name }}
+          APP: ${{ github.event_name == 'workflow_dispatch' && inputs.app || github.event.client_payload.app }}
+          VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.event.client_payload.version }}
         shell: bash
         run: |
           set -euo pipefail
@@ -38,10 +49,9 @@ jobs:
             *) echo "Unsupported app: $APP" >&2; exit 1 ;;
           esac
           [[ "$VERSION" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?([.-][0-9A-Za-z.-]+)?$ ]]
-          [[ "$ASSET_NAME" == "$expected_asset" ]]
-          [[ "$ASSET_URL" == "https://github.com/$expected_repo/releases/download/v$VERSION/$expected_asset" ]]
-          curl --fail --location --silent --show-error "$ASSET_URL" --output "$RUNNER_TEMP/$ASSET_NAME"
-          checksum=$(shasum -a 256 "$RUNNER_TEMP/$ASSET_NAME" | awk '{print $1}')
+          ASSET_URL="https://github.com/$expected_repo/releases/download/v$VERSION/$expected_asset"
+          curl --fail --location --silent --show-error "$ASSET_URL" --output "$RUNNER_TEMP/$expected_asset"
+          checksum=$(shasum -a 256 "$RUNNER_TEMP/$expected_asset" | awk '{print $1}')
           echo "app=$APP" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "sha256=$checksum" >> "$GITHUB_OUTPUT"
