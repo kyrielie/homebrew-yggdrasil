@@ -7,7 +7,7 @@ cask "honeycrisp" do
   desc "Standalone EPUB reader"
   homepage "https://github.com/kyrielie/honeycrisp"
 
-  depends_on macos: ">= :ventura"
+  depends_on macos: :ventura
 
   app "Honeycrisp.app"
 end
