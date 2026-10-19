@@ -11,9 +11,23 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tap this repository
+        run: brew tap local/audit "$GITHUB_WORKSPACE"
+
       - name: Audit changed casks
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
-          for cask in Casks/*.rb; do
-            brew audit --cask --strict "$cask"
+          changed=$(git diff --name-only --diff-filter=d "$BASE_SHA"...HEAD -- 'Casks/**/*.rb')
+          if [ -z "$changed" ]; then
+            echo "No cask changes to audit."
+            exit 0
+          fi
+          for file in $changed; do
+            token=$(basename "$file" .rb)
+            brew audit --cask --strict "local/audit/$token"
           done
