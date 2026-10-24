@@ -1,6 +1,6 @@
 cask "honeycrisp" do
-  version "3.0.0"
-  sha256 "27f7104acc666e2dd683df3269194f644528ce417216f2741bfcf4b3163cd251"
+  version "3.0.1"
+  sha256 "623641afe1ea11abd25fc03e6f9fbc18f3671ec05b8bafb96f79abe2930ad95f"
 
   url "https://github.com/kyrielie/honeycrisp/releases/download/v#{version}/Honeycrisp.dmg"
   name "Honeycrisp"
