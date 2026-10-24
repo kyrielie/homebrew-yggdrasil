@@ -1,6 +1,6 @@
 cask "ambrosia" do
-  version "0.1.5"
-  sha256 "30f89601c6480bc9597619e4ccc9adf0528ad541e3c29d2e8bc41221ee841cc6"
+  version "0.1.6"
+  sha256 "1904ca193b3e4ef6cf8555f3e20f50b7440fca1238073c0298ced27b64a936f4"
 
   url "https://github.com/kyrielie/ambrosia/releases/download/v#{version}/Ambrosia.dmg"
   name "Ambrosia"
